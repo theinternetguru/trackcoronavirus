@@ -238,6 +238,52 @@ df_summary %>%
 ```
 
 
+Map
+=======================================================================
+
+**Map**
+
+```{r}
+# map tab added by Art Steinmetz
+library(leaflet)
+library(leafpop)
+library(dplyr)
+library(purrr)
+cv_data_for_plot <- coronavirus %>% 
+  filter(cases > 0) %>% 
+  group_by(Country.Region,Province.State,Lat,Long,type) %>% 
+  summarise(cases = sum(cases)) %>% 
+  mutate(log_cases = 2 * log(cases)) %>% 
+  ungroup()
+cv_data_for_plot.split <- cv_data_for_plot %>% split(cv_data_for_plot$type)
+pal <- colorFactor(c("orange", "red","green"), domain = c("confirmed", "death","recovered"))
+map_object <- leaflet() %>% addProviderTiles(providers$Stamen.Toner)
+names(cv_data_for_plot.split) %>%
+  purrr::walk( function(df) {
+    map_object <<- map_object %>%
+      addCircleMarkers(data=cv_data_for_plot.split[[df]],
+                 lng=~Long, lat=~Lat,
+#                 label=~as.character(cases),
+                 color = ~pal(type),
+                 stroke = FALSE,
+                 fillOpacity = 0.8,
+                 radius = ~log_cases,
+                 popup =  leafpop::popupTable(cv_data_for_plot.split[[df]],
+                                              feature.id = FALSE,
+                                              row.numbers = FALSE,
+                                              zcol=c("type","cases","Country.Region","Province.State")),
+                 group = df,
+#                 clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F),
+                 labelOptions = labelOptions(noHide = F,
+                                             direction = 'auto'))
+  })
+map_object %>%
+  addLayersControl(
+    overlayGroups = names(cv_data_for_plot.split),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
 Trends
 =======================================================================
 
@@ -433,7 +479,7 @@ The input data for this dashboard is the [coronavirus](https://github.com/RamiKr
 **Packages**
 
 * Dashboard interface - the [flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/) package. 
-* Visualization - the [plotly](https://plot.ly/r/) package
+* Visualization - the [plotly](https://plot.ly/r/) package for the plots and [leaflet](https://rstudio.github.io/leaflet/) for the map
 * Data manipulation - [dplyr](https://dplyr.tidyverse.org/), and [tidyr](https://tidyr.tidyverse.org/)
 * Tables - the [DT](https://rstudio.github.io/DT/) package
 
@@ -446,5 +492,9 @@ The dashboard was deployed to Github docs. If you wish to deploy and/or modify t
 * Here some general guidance about deployment of flexdashboard on Github page - [link](https://github.com/pbatey/flexdashboard-example)
 
 For any question or feedback, you can either open an [issue](https://github.com/RamiKrispin/coronavirus_dashboard/issues) or contact me on [Twitter](https://twitter.com/Rami_Krispin).
+
+**Contribution** 
+
+The **Map** tab was contributed by [Art Steinmetz](@adababbage) on this [pull request](https://github.com/RamiKrispin/coronavirus_dashboard/pull/1). Thanks Art!
 
 
